@@ -58,7 +58,9 @@ def update_repos(url, github_user, github_api_token, github_api_base_url, github
                             sync_fork(repo_json.json(), repo_dir, github_user)
                         except:
                             pass
-                        print subprocess.check_output('git up', cwd=repo_dir, shell=True)
+                        branches = subprocess.check_output('git branch -a', cwd=repo_dir, shell=True)
+                        if len(branches) > 0:
+                            print subprocess.check_output('git up', cwd=repo_dir, shell=True)
                     except:
                         cmd = 'git clone %s' % repo['ssh_url']
                         print subprocess.check_output(cmd, cwd=base_dir, shell=True)
