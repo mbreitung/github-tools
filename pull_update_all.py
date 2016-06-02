@@ -31,7 +31,8 @@ def sync_fork(repo, repo_dir, github_user):
                 raise e
 
 
-def update_repos(url, github_user, github_api_token, github_api_base_url, github_crt=None, is_team=True):
+def update_repos(url, github_user, github_api_token, github_api_base_url,
+                 enterprise_name, github_crt=None, is_team=True):
     full_url = github_api_base_url + url
     try:
         auth = (github_user, github_api_token)
@@ -41,15 +42,18 @@ def update_repos(url, github_user, github_api_token, github_api_base_url, github
             for repo in data:
                 print '--------------------------------------------------------------------------------------------'
                 print repo['ssh_url']
-                print repo['owner']['login']
+                # print repo['owner']['login']
                 pwd = subprocess.check_output('pwd').replace('\n', '')
                 base_dir = "%s/%s" % (pwd, repo['owner']['login'])
                 repo_dir = '%s/%s' % (base_dir, repo['name'])
 
-                if not os.path.exists(base_dir):
-                    os.mkdir(base_dir)
+                if 'PRS-UI' in repo['name']:
+                    continue
 
                 if not is_team:
+                    if not os.path.exists(base_dir):
+                        os.mkdir(base_dir)
+
                     url = github_api_base_url + '/repos/%s/%s' % (repo['owner']['login'], repo['name'])
                     repo_json = requests.get(url, auth=auth, verify=github_crt)
 
@@ -64,6 +68,26 @@ def update_repos(url, github_user, github_api_token, github_api_base_url, github
                     except:
                         cmd = 'git clone %s' % repo['ssh_url']
                         print subprocess.check_output(cmd, cwd=base_dir, shell=True)
+                else:
+                    pwd = subprocess.check_output('pwd').replace('\n', '')
+                    base_dir = "%s/%s" % (pwd, enterprise_name)
+                    base2_dir = "%s/%s" % (base_dir, repo['owner']['login'])
+                    repo_dir = '%s/%s' % (base2_dir, repo['name'])
+                    try:
+                        os.mkdir(base_dir)
+                    except:
+                        pass
+                    try:
+                        os.mkdir(base2_dir)
+                    except:
+                        pass
+                    try:
+                        os.mkdir(repo_dir)
+                    except:
+                        pass
+                        # cmd = 'git clone --bare %s' % repo['ssh_url']
+                        # print subprocess.check_output(cmd, cwd=base_dir, shell=True)
+
 
     except Exception as e:
         import traceback
@@ -77,6 +101,16 @@ def load_config():
         return yaml.safe_load(stream)
 
 
+def show_all_orgs(github_user, github_api_token, github_api_base_url, github_crt):
+    auth = (github_user, github_api_token)
+    result = requests.get(github_api_base_url + '/organizations', auth=auth, verify=github_crt)
+    print github_api_base_url + '/organizations'
+    data = result.json()
+    for org in data:
+        print org['login']
+        # pprint.pprint(data)
+
+
 if __name__ == '__main__':
 
     config = load_config()
@@ -84,13 +118,26 @@ if __name__ == '__main__':
     github_api_token = config['api_token']
     enterprise_host = config['enterprise_url']
     github_crt = config['enterprise_cert']
+    enterprise_name = config['enterprise']
     github_api_base_url = 'https://%s/api/v3' % enterprise_host
     teams = config['teams']
     users = config['users']
 
+    show_all_orgs(github_user, github_api_token, github_api_base_url, github_crt)
+
     for team in teams:
-        update_repos('/orgs/%s/repos' % team, github_user, github_api_token, github_api_base_url, github_crt)
+        update_repos('/orgs/%s/repos' % team, github_user,
+                     github_api_token,
+                     github_api_base_url,
+                     enterprise_name,
+                     github_crt,
+                     is_team=True)
 
     for user in users:
-        update_repos('/users/%s/repos' % user, github_user, github_api_token,
-                     github_api_base_url, github_crt, is_team=False)
+        update_repos('/users/%s/repos' % user,
+                     github_user,
+                     github_api_token,
+                     github_api_base_url,
+                     enterprise_name,
+                     github_crt,
+                     is_team=False)
