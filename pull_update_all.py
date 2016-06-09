@@ -20,6 +20,7 @@ def sync_fork(repo, repo_dir, github_user):
         command_list = [
             'git checkout master',
             'git pull --rebase',
+            'git merge upstream/master'
         ]
         if repo['owner']['login'] == github_user:
             command_list.append('git push origin master')
