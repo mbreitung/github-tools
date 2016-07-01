@@ -67,8 +67,11 @@ def update_repos(url, github_user, github_api_token, github_api_base_url,
                         if len(branches) > 0:
                             print subprocess.check_output('git up', cwd=repo_dir, shell=True)
                     except:
-                        cmd = 'git clone %s' % repo['ssh_url']
-                        print subprocess.check_output(cmd, cwd=base_dir, shell=True)
+                        try:
+                            cmd = 'git clone %s' % repo['ssh_url']
+                            print subprocess.check_output(cmd, cwd=base_dir, shell=True)
+                        except:
+                            pass
                 else:
                     pwd = subprocess.check_output('pwd').replace('\n', '')
                     base_dir = "%s/%s" % (pwd, enterprise_name)
@@ -107,10 +110,12 @@ def show_all_orgs(github_user, github_api_token, github_api_base_url, github_crt
     result = requests.get(github_api_base_url + '/organizations', auth=auth, verify=github_crt)
     print github_api_base_url + '/organizations'
     data = result.json()
+    all_orgs = []
     for org in data:
         print org['login']
+        all_orgs.append(org['login'])
         # pprint.pprint(data)
-
+    return all_orgs
 
 if __name__ == '__main__':
 
@@ -124,9 +129,9 @@ if __name__ == '__main__':
     teams = config['teams']
     users = config['users']
 
-    show_all_orgs(github_user, github_api_token, github_api_base_url, github_crt)
+    all_orgs = show_all_orgs(github_user, github_api_token, github_api_base_url, github_crt)
 
-    for team in teams:
+    for team in all_orgs:
         update_repos('/orgs/%s/repos' % team, github_user,
                      github_api_token,
                      github_api_base_url,
